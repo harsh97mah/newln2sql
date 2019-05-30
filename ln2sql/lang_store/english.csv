@@ -1,18 +1,25 @@
-AVG: average, avg, Average
-SUM: sum, total
-MAX: maximum, highest, max
-MIN: minimum, lowest, min
-COUNT: number, how many, count
-JUNCTION: and
-DISJUNCTION: or
-GREATER: greater, over, greater than, more than, over than
-LESS: less , less than
-BETWEEN: between, per, range
-ORDER: order, ordered
-ASC: ascending, increasing
-DESC: descending, decreasing, inverse, reverse, opposite
-GROUP: group, grouped, clubbed
-NEGATION: not, no
-EQUAL: is, equal, equals, equal to, equals to, are
-LIKE: like, likes, similar to
-DISTINCT: distinct, different, distinctive, distinctly, unique
+AVG: average, avg, Average,,,
+SUM: sum, total,,,,
+MAX: maximum, highest, max,,,
+MIN: minimum, lowest, min,,,
+COUNT: number, how many, count,,,
+JUNCTION: and,,,,,
+DISJUNCTION: or,,,,,
+GREATER: greater, over, greater than, more than, over than,
+LESS: less , less than,,,,
+BETWEEN: between, per, range,,,
+ORDER: order, ordered,,,,
+ASC: ascending, increasing,,,,
+DESC: descending, decreasing, inverse, reverse, opposite,
+GROUP: group, grouped, clubbed,,,
+NEGATION: not equal to , no , not,,,
+EQUAL: is, equal, equals, equal to, equals to, are, as
+LIKE: like, likes, similar to,,,
+DISTINCT: distinct, different, distinctive, distinctly, unique,
+NOTMAX: not maximum,not highest,not max,other than max,other than maximum,
+NOTMIN: not minimum,not lowest,not min,other than min,other than minimum,
+EMPTY: null,none,no value,blank,empty,
+GTE: greater than or equal to ,more than or equal to,at least,,,
+LTE: less than or equal to,at most,,,,
+NONEMPTY: not empty,not blank,have value,not none,not null,
+EXPLORE: explore,summary,,,,

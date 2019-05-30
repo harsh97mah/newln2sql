@@ -3,6 +3,7 @@ import re
 
 from .constants import Color
 from .table import Table
+from .column import Column
 
 
 class Database:
@@ -19,6 +20,20 @@ class Database:
 
     def get_tables(self):
         return self.tables
+
+    def get_table_names(self):
+        table_names = []
+        for table in self.tables:
+            table_names.append(table.name)
+
+    def get_table_with_this_column(self, name):
+        tables = []
+        for table in self.tables:
+            for column in table.get_columns():
+                if column.name == name:
+                    tables.append(table.name)
+        return tables
+
 
     def get_column_with_this_name(self, name):
         for table in self.tables:
@@ -97,11 +112,12 @@ class Database:
         if 'int' in string.lower():
             return 'int'
         elif 'char' in string.lower() or 'text' in string.lower():
-            return 'string'
+            return 'str'
         elif 'date' in string.lower():
             return 'date'
         else:
             return 'unknow'
+
 
     def create_table(self, table_string):
         lines = table_string.split("\n")

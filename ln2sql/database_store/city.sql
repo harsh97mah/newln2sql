@@ -28,14 +28,14 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `city` (
   `id` int(11) NOT NULL,
-  `cityName` varchar(30) NOT NULL
+  `Name` varchar(30) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `city`
 --
 
-INSERT INTO `city` (`id`, `cityName`) VALUES
+INSERT INTO `city` (`id`, `Name`) VALUES
 (1, 'Pune'),
 (2, 'Hillwood'),
 (3, 'San Jose'),

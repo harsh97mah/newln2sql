@@ -2,9 +2,13 @@ import os
 
 from ln2sql.parser import Parser
 from ln2sql.stopwordFilter import StopwordFilter
+from ln2sql.database import Database
+from ln2sql import Ln2sql
 
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))  # Project directory.
 STOPWORDS_PATH = os.path.join(BASE_PATH, 'ln2sql/stopwords/')
+DATABASE_PATH = os.path.join(BASE_PATH, 'ln2sql/database_store')
+LANGUAGE_PATH  =os.path.join(BASE_PATH, 'ln2sql/lang_store')
 
 
 def test_parser_sort_length():

@@ -56,8 +56,9 @@ class Ln2sql:
         for query in queries:
             full_query += str(query)
             print(query)
-
+        #print(full_query)
         return full_query
+
 
     def remove_json(self, filename="output.json"):
         if os.path.exists(filename):
