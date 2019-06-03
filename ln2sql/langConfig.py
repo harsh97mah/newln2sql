@@ -42,6 +42,12 @@ class LangConfig:
         self.gte_keywords = []
         self.lte_keywords = []
         self.explore_keywords = []
+        self.contains_keywords = []
+        self.not_contains_keywords = []
+        self.starts_with_keywords = []
+        self.ends_with_keywords = []
+        self.not_starts_with_keywords = []
+        self.not_ends_with_keywords = []
         self.all_keywords = []
 
     def get_avg_keywords(self):
@@ -119,6 +125,24 @@ class LangConfig:
     def get_explore_keywords(self):
         return self.explore_keywords
 
+    def get_contains_keywords(self):
+        return self.contains_keywords
+
+    def get_not_contains_keywords(self):
+        return self.not_contains_keywords
+
+    def get_starts_with_keywords(self):
+        return self.starts_with_keywords
+
+    def get_ends_with_keywords(self):
+        return self.ends_with_keywords
+
+    def get_not_starts_with_keywords(self):
+        return self.not_starts_with_keywords
+
+    def get_not_ends_with_keywords(self):
+        return self.not_ends_with_keywords
+
     def get_all_keywords(self):
         return self.all_keywords
 
@@ -150,15 +174,17 @@ class LangConfig:
             while '' in all:
                 all.remove('')
             for word in all:
-                word = word.replace(' ','')
+                word = word.strip()
                 allin.append(word)
             self.all_keywords = allin
+            #print(self.all_keywords)
             self.avg_keywords = list(
                 map(self.remove_accents, list(map(str.strip, content[0].replace(':', ',').split(",")))))
             self.avg_keywords = self.avg_keywords[1:len(self.avg_keywords)]
             self.avg_keywords = [keyword.lower() for keyword in self.avg_keywords]
             while("" in self.avg_keywords):
                 self.avg_keywords.remove("")
+
             self.sum_keywords = list(
                 map(self.remove_accents, list(map(str.strip, content[1].replace(':', ',').split(",")))))
             self.sum_keywords = self.sum_keywords[1:len(self.sum_keywords)]
@@ -327,6 +353,48 @@ class LangConfig:
             while("" in self.explore_keywords):
                 self.explore_keywords.remove("")
 
+            self.contains_keywords = list(
+                map(self.remove_accents, list(map(str.strip, content[25].replace(':', ',').split(",")))))
+            self.contains_keywords = self.contains_keywords[1:len(self.contains_keywords)]
+            self.contains_keywords = [keyword.lower() for keyword in self.contains_keywords]
+            while("" in self.contains_keywords):
+                self.contains_keywords.remove("")
+
+            self.not_contains_keywords = list(
+                map(self.remove_accents, list(map(str.strip, content[26].replace(':', ',').split(",")))))
+            self.not_contains_keywords = self.not_contains_keywords[1:len(self.not_contains_keywords)]
+            self.not_contains_keywords = [keyword.lower() for keyword in self.not_contains_keywords]
+            while("" in self.not_contains_keywords):
+                self.not_contains_keywords.remove("")
+
+            self.starts_with_keywords = list(
+                map(self.remove_accents, list(map(str.strip, content[27].replace(':', ',').split(",")))))
+            self.starts_with_keywords = self.starts_with_keywords[1:len(self.starts_with_keywords)]
+            self.starts_with_keywords = [keyword.lower() for keyword in self.starts_with_keywords]
+            while("" in self.starts_with_keywords):
+                self.starts_with_keywords.remove("")
+
+            self.ends_with_keywords = list(
+                map(self.remove_accents, list(map(str.strip, content[28].replace(':', ',').split(",")))))
+            self.ends_with_keywords = self.ends_with_keywords[1:len(self.ends_with_keywords)]
+            self.ends_with_keywords = [keyword.lower() for keyword in self.ends_with_keywords]
+            while("" in self.ends_with_keywords):
+                self.ends_with_keywords.remove("")
+
+            self.not_starts_with_keywords = list(
+                map(self.remove_accents, list(map(str.strip, content[29].replace(':', ',').split(",")))))
+            self.not_starts_with_keywords = self.not_starts_with_keywords[1:len(self.not_starts_with_keywords)]
+            self.not_starts_with_keywords = [keyword.lower() for keyword in self.not_starts_with_keywords]
+            while("" in self.not_starts_with_keywords):
+                self.not_starts_with_keywords.remove("")
+
+            self.not_ends_with_keywords = list(
+                map(self.remove_accents, list(map(str.strip, content[30].replace(':', ',').split(",")))))
+            self.not_ends_with_keywords = self.not_ends_with_keywords[1:len(self.not_ends_with_keywords)]
+            self.not_ends_with_keywords = [keyword.lower() for keyword in self.not_ends_with_keywords]
+            while("" in self.not_ends_with_keywords):
+                self.not_ends_with_keywords.remove("")
+
     def print_me(self):
         print(self.avg_keywords)
         print(self.sum_keywords)
@@ -353,3 +421,9 @@ class LangConfig:
         print(self.lte_keywords)
         print(self.non_empty_keywords)
         print(self.explore_keywords)
+        print(self.contains_keywords)
+        print(self.not_contains_keywords)
+        print(self.starts_with_keywords)
+        print(self.ends_with_keywords)
+        print(self.not_starts_with_keywords)
+        print(self.not_ends_with_keywords)

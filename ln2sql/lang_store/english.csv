@@ -21,5 +21,11 @@ NOTMIN: not minimum,not lowest,not min,other than min,other than minimum,
 EMPTY: null,none,no value,blank,empty,
 GTE: greater than or equal to ,more than or equal to,at least,,,
 LTE: less than or equal to,at most,,,,
-NONEMPTY: not empty,not blank,have value,not none,not null,
+NONEMPTY: not empty,not blank,have value,not none,not null,non empty
 EXPLORE: explore,summary,,,,
+CONTAINS: contain, contains, with letters, with string,
+NOT CONTAINS: not contains, not contain, without letters, without string, does not contains
+STARTS WITH: starts with, begins with, at the start, at the beginning,
+ENDS WITH: ends with, at the ending,
+NOT START WITH: does not start with, does not begin with,
+NOT END WITH: does not end with,

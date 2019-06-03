@@ -12,6 +12,9 @@ import sys
 import unicodedata
 import functools
 from threading import Thread
+import nltk
+from nltk import word_tokenize
+from nltk.util import ngrams
 
 from dateutil.parser import parse
 
@@ -252,7 +255,8 @@ class WhereParser(Thread):
                  average_keywords, max_keywords, min_keywords, greater_keywords, less_keywords, between_keywords,
                  negation_keywords, junction_keywords, disjunction_keywords, like_keywords, distinct_keywords,equal_keywords,
                  non_max_keywords, non_min_keywords, empty_keywords,gte_keywords,lte_keywords,non_empty_keywords,
-                 explore_keywords,database_dico, database_object):
+                 explore_keywords,contains_keywords,not_contains_keywords,starts_with_keywords,ends_with_keywords,
+                 not_starts_with_keywords,not_ends_with_keywords,database_dico,database_object):
         Thread.__init__(self)
         self.where_objects = []
         self.phrases = phrases
@@ -280,6 +284,12 @@ class WhereParser(Thread):
         self.lte_keywords = lte_keywords
         self.non_empty_keywords = non_empty_keywords
         self.explore_keywords = explore_keywords
+        self.contains_keywords = contains_keywords
+        self.not_contains_keywords = not_contains_keywords
+        self.starts_with_keywords = starts_with_keywords
+        self.ends_with_keywords = ends_with_keywords
+        self.not_starts_with_keywords = not_starts_with_keywords
+        self.not_ends_with_keywords = not_ends_with_keywords
 
     def get_tables_of_column(self, column):
         tmp_table = []
@@ -295,8 +305,8 @@ class WhereParser(Thread):
     def intersect(self, a, b):
         return list(set(a) & set(b))
 
-    def predict_operation_type(self, previous_column_offset, current_column_offset, column_datatype):
-        interval_offset = list(range(previous_column_offset, current_column_offset))
+    def predict_operation_type(self, previous_column_offset, next_column_offset, column_datatype):
+        interval_offset = list(range(previous_column_offset, next_column_offset))
         if column_datatype == 'int':
             if (len(self.intersect(interval_offset, self.count_keyword_offset)) >= 1):
                 return 'COUNT'
@@ -316,13 +326,17 @@ class WhereParser(Thread):
                 return 'NOT_EMPTY'
             elif (len(self.intersect(interval_offset, self.empty_keyword_offset)) >= 1):
                 return 'IS_EMPTY'
-            elif (len(self.intersect(interval_offset, self.empty_keyword_offset)) >= 1):
+            elif (len(self.intersect(interval_offset, self.explore_keyword_offset)) >= 1):
                 return 'EXPLORE'
             else:
                 return None
-        else:
-            if (len(self.intersect(interval_offset, self.empty_keyword_offset)) >= 1):
+        elif column_datatype == 'str':
+            if (len(self.intersect(interval_offset, self.explore_keyword_offset)) >= 1):
                 return 'EXPLORE'
+            elif (len(self.intersect(interval_offset, self.non_empty_keyword_offset)) >= 1):
+                return 'NOT_EMPTY'
+            elif (len(self.intersect(interval_offset, self.empty_keyword_offset)) >= 1):
+                return 'IS_EMPTY'
             else:
                 return None
 
@@ -353,8 +367,22 @@ class WhereParser(Thread):
                 return 'EQ'
             else:
                 return None
-        else:
-            if (len(self.intersect(interval_offset, self.equal_keyword_offset)) >=1):
+        elif column_datatype == 'str':
+            if (len(self.intersect(interval_offset, self.not_contains_keyword_offset)) >= 1):
+                return 'NOT_CONTAINS'
+            elif (len(self.intersect(interval_offset, self.contains_keyword_offset)) >= 1):
+                return 'CONTAINS'
+            elif (len(self.intersect(interval_offset, self.not_starts_with_keyword_offset)) >= 1):
+                return 'NOT_STARTS_WITH'
+            elif (len(self.intersect(interval_offset, self.starts_with_keyword_offset)) >= 1):
+                return 'STARTS_WITH'
+            elif (len(self.intersect(interval_offset, self.not_ends_with_keyword_offset)) >= 1):
+                return 'NOT_ENDS_WITH'
+            elif (len(self.intersect(interval_offset, self.ends_with_keyword_offset)) >= 1):
+                return 'ENDS_WITH'
+            elif (len(self.intersect(interval_offset, self.negation_keyword_offset)) >= 1):
+                return 'NE'
+            elif (len(self.intersect(interval_offset, self.equal_keyword_offset)) >=1):
                 return 'EQ'
             else:
                 return None
@@ -420,6 +448,13 @@ class WhereParser(Thread):
         self.lte_keyword_offset = []
         self.non_empty_keyword_offset = []
         self.explore_keyword_offset = []
+        self.contains_keyword_offset = []
+        self.not_contains_keyword_offset = []
+        self.starts_with_keyword_offset = []
+        self.ends_with_keyword_offset = []
+        self.not_starts_with_keyword_offset = []
+        self.not_ends_with_keyword_offset = []
+
         if len(self.phrases) != 0:
             for phrase in self.phrases:
                 phrase_offset_string = ''
@@ -543,8 +578,37 @@ class WhereParser(Thread):
                         if keyword in phrase_offset_string.split() :    # after the column
                             if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
                                 self.explore_keyword_offset.append(i)
-            where_object = Where()
 
+                    for keyword in self.contains_keywords:
+                        if keyword in phrase_offset_string :
+                            if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
+                                self.contains_keyword_offset.append(i)
+
+                    for keyword in self.not_contains_keywords:
+                        if keyword in phrase_offset_string :
+                            if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
+                                self.not_contains_keyword_offset.append(i)
+
+                    for keyword in self.starts_with_keywords:
+                        if keyword in phrase_offset_string :
+                            if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
+                                self.starts_with_keyword_offset.append(i)
+
+                    for keyword in self.ends_with_keywords:
+                        if keyword in phrase_offset_string :
+                            if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
+                                self.ends_with_keyword_offset.append(i)
+
+                    for keyword in self.not_starts_with_keywords:
+                        if keyword in phrase_offset_string :
+                            if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
+                                self.not_starts_with_keyword_offset.append(i)
+
+                    for keyword in self.not_ends_with_keywords:
+                        if keyword in phrase_offset_string :
+                            if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
+                                self.not_ends_with_keyword_offset.append(i)
+            where_object = Where()
             for i in range(0, len(column_offset)):
                 current = column_offset[i]
                 if i == 0:
@@ -558,7 +622,7 @@ class WhereParser(Thread):
                     _next = column_offset[i + 1]
                 junction = self.predict_junction(previous, current)
                 column = self.get_column_name_with_alias_table(columns_of_where[i])
-                operation_type = self.predict_operation_type(previous, current,column_datatype)
+                operation_type = self.predict_operation_type(previous, _next,column_datatype)
                 if operation_type is not None:
                     value = 'true'
                 else:
@@ -579,6 +643,8 @@ class WhereParser(Thread):
                 operator = self.predict_operator(current, _next, column_datatype)
                 if len(column) is not None:
                     where_object.add_condition(junction, Condition(column, operation_type, operator, value))
+        if operation_type is None and operator is None:
+            raise SystemExit(1)
         if value_list != column_list:
             raise SystemExit(1)
         self.where_objects.append(where_object)
@@ -706,6 +772,12 @@ class Parser:
     lte_keywords = []
     non_empty_keywords =[]
     explore_keywords = []
+    contains_keywords = []
+    not_contains_keywords = []
+    starts_with_keywords = []
+    ends_with_keywords = []
+    not_starts_with_keywords = []
+    not_ends_with_keywords = []
     all_keywords = []
 
     def __init__(self, database, config):
@@ -737,6 +809,12 @@ class Parser:
         self.lte_keywords = config.get_lte_keywords()
         self.non_empty_keywords = config.get_non_empty_keywords()
         self.explore_keywords = config.get_explore_keywords()
+        self.contains_keywords = config.get_contains_keywords()
+        self.not_contains_keywords = config.get_not_contains_keywords()
+        self.starts_with_keywords = config.get_starts_with_keywords()
+        self.ends_with_keywords = config.get_ends_with_keywords()
+        self.not_starts_with_keywords = config.get_not_starts_with_keywords()
+        self.not_ends_with_keywords = config.get_not_ends_with_keywords()
         self.all_keywords = config.get_all_keywords()
 
 
@@ -802,7 +880,14 @@ class Parser:
         last_table_position_temp = 0
         med_phrase = ''
         all_key = 0
-        for word in input_word_list:
+        token = nltk.word_tokenize(input_for_finding_value)
+        input_word_list2 = list(ngrams(token, 2))
+        input_word_list3 = list(ngrams(token, 3))
+        input_word_list3 = [' '.join(list(x)) for x in input_word_list3]
+        input_word_list2 = [' '.join(list(x)) for x in input_word_list2]
+        input_word_list2 += input_word_list
+        input_word_list3 += input_word_list2
+        for word in input_word_list3:
             if word in self.all_keywords:
                 all_key += 1
 
@@ -819,7 +904,7 @@ class Parser:
                     if (input_word_list[i] == column.name) or (input_word_list[i] in column.equivalences):
                         if number_of_where_column_temp == 0:
                             last_table_position_temp = 1
-                            med_phrase = input_word_list[:last_table_position_temp + 1]
+                            med_phrase = input_word_list[:last_table_position_temp]
                         number_of_where_column_temp += 1
                         break
                     else:
@@ -844,7 +929,7 @@ class Parser:
             for filter_element in filter_list:
                 irext = irext.replace(filter_element, " ")
 
-            assignment_list = self.equal_keywords + self.like_keywords + self.greater_keywords + self.less_keywords + self.negation_keywords + self.gte_keywords + self.lte_keywords
+            assignment_list = self.equal_keywords + self.contains_keywords + self.not_contains_keywords + self.starts_with_keywords + self.ends_with_keywords + self.not_starts_with_keywords + self.not_ends_with_keywords + self.like_keywords + self.greater_keywords + self.less_keywords + self.negation_keywords + self.gte_keywords + self.lte_keywords
             # As these words can also be part of assigners
 
             # custom operators added as they can be possibilities
@@ -1119,7 +1204,8 @@ class Parser:
                                        self.disjunction_keywords, self.like_keywords, self.distinct_keywords,self.equal_keywords,
                                        self.non_max_keywords, self.non_min_keywords, self.empty_keywords,
                                        self.gte_keywords, self.lte_keywords, self.non_empty_keywords,
-                                       self.explore_keywords,self.database_dico, self.database_object)
+                                       self.explore_keywords, self.contains_keywords, self.not_contains_keywords, self.starts_with_keywords,
+                                       self.ends_with_keywords, self.not_starts_with_keywords, self.not_ends_with_keywords, self.database_dico, self.database_object)
             select_parser = SelectParser(columns_of_select, select_phrase, self.count_keywords,
                                          self.sum_keywords, self.average_keywords, self.max_keywords, self.min_keywords,
                                          self.distinct_keywords,self.non_max_keywords, self.non_min_keywords, self.empty_keywords,self.non_empty_keywords,
