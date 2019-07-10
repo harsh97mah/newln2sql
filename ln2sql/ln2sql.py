@@ -7,20 +7,17 @@ from .langConfig import LangConfig
 from .parser import Parser
 from .stopwordFilter import StopwordFilter
 from .thesaurus import Thesaurus
-from .constants import Color, without_color
+import logging
+log = logging.getLogger(__name__)
 
 class Ln2sql:
     def __init__(
             self,
-            database_path,
-            language_path,
-            json_output_path=None,
+            data,
             thesaurus_path=None,
             stopwords_path=None,
-            color=False
     ):
-        if color == False:
-            without_color()
+        language_path='lang_store/english.csv'
 
         database = Database()
         self.stopwordsFilter = None
@@ -34,32 +31,30 @@ class Ln2sql:
             self.stopwordsFilter = StopwordFilter()
             self.stopwordsFilter.load(stopwords_path)
 
-        database.load(database_path)
-        # database.print_me()
+        database.load(data)
 
         config = LangConfig()
         config.load(language_path)
 
         self.parser = Parser(database, config)
-        self.json_output_path = json_output_path
 
-    def get_query(self, input_sentence):
+    def validate(self, input_sentence):
+        validation = self.parser.validate_input_sentence(input_sentence)
+        return validation
+
+    def query_type(self, input_sentence):
+        task_type = self.parser.determine_task_type(input_sentence)
+        return task_type
+
+    def get_query(self, input_sentence, workspace_id):
         queries = self.parser.parse_sentence(input_sentence, self.stopwordsFilter)
-
-        if self.json_output_path:
-            self.remove_json(self.json_output_path)
-            for query in queries:
-                query.print_json(self.json_output_path)
-
         full_query = ''
-
         for query in queries:
-            full_query += str(query)
-            print(query)
-        #print(full_query)
+            log.debug("%s", query)
+            if query is not None:
+                log.debug("%s", str(query))
+                full_query += "{'param': {"
+                full_query += str(query)
+                full_query += " 'WORKSPACE_ID': " + '"' + str(workspace_id) + '"}' +'}'
+        log.debug("%s", full_query)
         return full_query
-
-
-    def remove_json(self, filename="output.json"):
-        if os.path.exists(filename):
-            os.remove(filename)

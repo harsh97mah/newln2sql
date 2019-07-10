@@ -32,8 +32,8 @@ class Table:
             if column.name == column_name:
                 return column
 
-    def add_column(self, column_name, column_type, column_equivalences):
-        self.columns.append(Column(column_name, column_type, column_equivalences))
+    def add_column(self, column_name, column_internal_name, column_type, column_equivalences):
+        self.columns.append(Column(column_name, column_internal_name, column_type, column_equivalences))
 
     def get_equivalences(self):
         return self.equivalences

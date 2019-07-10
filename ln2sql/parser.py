@@ -15,6 +15,9 @@ from threading import Thread
 import nltk
 from nltk import word_tokenize
 from nltk.util import ngrams
+import logging
+
+log = logging.getLogger(__name__)
 
 from dateutil.parser import parse
 
@@ -75,11 +78,9 @@ class SelectParser(Thread):
                         select_phrases.append(self.phrase[previous_index:i + 1])
                         previous_index = i + 1
                 select_phrases = list(filter(None, select_phrases))
-                #print(select_phrases)
                 for i in range(0, len(select_phrases)):  # for each select phrase (i.e. column processing)
                     select_type = []
                     phrase = [word.lower() for word in select_phrases[i]]
-                    #print(phrase)
 #                    for keyword in self.average_keywords:
 #                        if keyword in phrase:
 #                            select_type.append('AVG')
@@ -112,9 +113,7 @@ class SelectParser(Thread):
 #                            select_type.append('NON_EMPTY')
                     for keyword in self.explore_keywords:
                         if keyword in phrase:
-                            select_type.append(['exp','COUNT','PERCENTAGE'])
-#                    if len(select_type) == 0:
-#                        select_type.append('ALL')
+                            select_type.append(['exp',['COUNT','count','agg'],['COUNT','Unformatted','unformatted'],['PERCENTAGE','percentage','percentage']])
                     if (i != len(select_phrases) - 1) or i == 0:
                         if len(select_type) >=1:
                             if len(self.columns_of_select) == 0:
@@ -169,17 +168,6 @@ class FromParser(Thread):
         for column in fk_column_of_trg_table:
             if column.is_foreign()['foreign_table'] == table_src:
                 return [(table_src, column.is_foreign()['foreign_column']), (table_trg, column.name)]
-
-                # pk_table_src = self.database_object.get_primary_key_names_of_table(table_src)
-                # pk_table_trg = self.database_object.get_primary_key_names_of_table(table_trg)
-                # match_pk_table_src_with_table_trg = self.intersect(pk_table_src, self.database_dico[table_trg])
-                # match_pk_table_trg_with_table_src = self.intersect(pk_table_trg, self.database_dico[table_src])
-
-                # if len(match_pk_table_src_with_table_trg) >= 1:
-                #     return [(table_trg, match_pk_table_src_with_table_trg[0]), (table_src, match_pk_table_src_with_table_trg[0])]
-                # elif len(match_pk_table_trg_with_table_src) >= 1:
-                # return [(table_trg, match_pk_table_trg_with_table_src[0]),
-                # (table_src, match_pk_table_trg_with_table_src[0])]
 
     def get_all_direct_linked_tables_of_a_table(self, table_src):
         links = []
@@ -307,7 +295,7 @@ class WhereParser(Thread):
 
     def predict_operation_type(self, previous_column_offset, next_column_offset, column_datatype):
         interval_offset = list(range(previous_column_offset, next_column_offset))
-        if column_datatype == 'int':
+        if column_datatype == 'NUMERIC':
             if (len(self.intersect(interval_offset, self.count_keyword_offset)) >= 1):
                 return 'COUNT'
             elif (len(self.intersect(interval_offset, self.sum_keyword_offset)) >= 1):
@@ -330,7 +318,7 @@ class WhereParser(Thread):
                 return 'EXPLORE'
             else:
                 return None
-        elif column_datatype == 'str':
+        elif column_datatype == 'TEXT':
             if (len(self.intersect(interval_offset, self.explore_keyword_offset)) >= 1):
                 return 'EXPLORE'
             elif (len(self.intersect(interval_offset, self.non_empty_keyword_offset)) >= 1):
@@ -342,7 +330,7 @@ class WhereParser(Thread):
 
     def predict_operator(self, current_column_offset, next_column_offset, column_datatype):
         interval_offset = list(range(current_column_offset, next_column_offset))
-        if column_datatype == 'int':
+        if column_datatype == 'NUMERIC':
             if (len(self.intersect(interval_offset, self.negation_keyword_offset)) >= 1) and (
                         len(self.intersect(interval_offset, self.greater_keyword_offset)) >= 1):
                     return 'LT'
@@ -367,7 +355,7 @@ class WhereParser(Thread):
                 return 'EQ'
             else:
                 return None
-        elif column_datatype == 'str':
+        elif column_datatype == 'TEXT':
             if (len(self.intersect(interval_offset, self.not_contains_keyword_offset)) >= 1):
                 return 'NOT_CONTAINS'
             elif (len(self.intersect(interval_offset, self.contains_keyword_offset)) >= 1):
@@ -426,6 +414,7 @@ class WhereParser(Thread):
         offset_of = {}
         column_list = []
         value_list = []
+        internal_name = []
 
         column_offset = []
         self.count_keyword_offset = []
@@ -465,8 +454,8 @@ class WhereParser(Thread):
                             if (phrase[i] == column.name) or (phrase[i] in column.equivalences):
                                 number_of_where_columns += 1
                                 column_datatype = column.type
+                                internal_name.append(column.internal_name)
                                 column_list.append(column_datatype)
-                                print(column_list)
                                 columns_of_where.append(column.name)
                                 offset_of[phrase[i]] = i
                                 column_offset.append(i)
@@ -475,10 +464,9 @@ class WhereParser(Thread):
                             continue
                         break
                     columns_of_where = list(sorted(set(columns_of_where), key = columns_of_where.index))
-                    column_offset = list(set(column_offset))
+                    column_offset = sorted(list(set(column_offset)))
                     phrase_keyword = str(phrase[i]).lower()  # for robust keyword matching
                     phrase_offset_string += phrase_keyword + " "
-                    #print(len(phrase_offset_string))
                     for keyword in self.count_keywords:
                         if keyword in phrase_offset_string :    # before the column
                             if (phrase_offset_string.find(keyword) + len(keyword) + 1 == len(phrase_offset_string) ) :
@@ -622,6 +610,7 @@ class WhereParser(Thread):
                     _next = column_offset[i + 1]
                 junction = self.predict_junction(previous, current)
                 column = self.get_column_name_with_alias_table(columns_of_where[i])
+                column_internal_name = internal_name[i]
                 operation_type = self.predict_operation_type(previous, _next,column_datatype)
                 if operation_type is not None:
                     value = 'true'
@@ -631,24 +620,31 @@ class WhereParser(Thread):
                             len(self.columns_of_values_of_where) - len(columns_of_where) + i]
                     else:
                         value = 'OOV'  # Out Of Vocabulary: default value
-                print(value)
                 if value != 'true':
                     value_type = type(value)
-                    value_list.append(value_type.__name__)
+                    if value_type.__name__ == 'str':
+                        if value.replace('.','',1).isdigit() == True:
+                            value_list.append('NUMERIC')
+                        else:
+                            value_list.append('TEXT')
+                    elif value_type.__name__ == 'int':
+                        value_list.append('NUMERIC')
+                    else:
+                        value_list.append('NUMERIC')
                 else:
                     value_type = column_datatype
                     value_list.append(value_type)
-                value_list = ['int' if x=='tuple' else x for x in value_list]
-                print(value_list)
+                value_list = ['NUMERIC' if x=='tuple' else x for x in value_list]
+                log.debug(value_list)
                 operator = self.predict_operator(current, _next, column_datatype)
                 if len(column) is not None:
-                    where_object.add_condition(junction, Condition(column, operation_type, operator, value))
+                    where_object.add_condition(junction, Condition(column_internal_name, operation_type, operator, value, column_datatype))
         if operation_type is None and operator is None:
             raise SystemExit(1)
         if value_list != column_list:
             raise SystemExit(1)
-        self.where_objects.append(where_object)
-
+        else:
+            self.where_objects.append(where_object)
 
     def join(self):
         Thread.join(self)
@@ -677,19 +673,15 @@ class GroupByParser(Thread):
 
     def run(self):
         group_by_object = GroupBy()
-        #print(self.phrases)
         for phrase in self.phrases:
             for i in range(0, len(phrase)):
                 for table_name in self.database_dico:
                     columns = self.database_object.get_table_by_name(table_name).get_columns()
                     for column in columns:
                         if (phrase[i] == column.name) or (phrase[i] in column.equivalences):
-                            column_with_alias = self.get_column_name_with_alias_table(column.name)
-                            #print(column_with_alias)
-                            group_by_object.set_column(column_with_alias)
-                            #print(group_by_object)
+                            internal_name = column.internal_name
+                            group_by_object.set_column(internal_name)
         self.group_by_objects.append(group_by_object)
-        #print(self.group_by_objects[0])
 
     def join(self):
         Thread.join(self)
@@ -855,6 +847,40 @@ class Parser:
         nkfd_form = unicodedata.normalize('NFKD', str(string))
         return "".join([c for c in nkfd_form if not unicodedata.combining(c)])
 
+    def validate_input_sentence(self, input_sentence):
+        validation = 0
+        key_count = 0
+        for table_name in self.database_dico:
+            columns = self.database_object.get_table_by_name(table_name).get_columns()
+        sentence_word = input_sentence.rstrip(string.punctuation.replace('"', '').replace("'", ""))
+        sentence_word_list = sentence_word.split()
+        for word in sentence_word_list:
+            if word in self.all_keywords:
+                key_count += 1
+        log.debug("%s", key_count)
+        if key_count > 0:
+            for word in sentence_word_list:
+                for column_name in columns:
+                        if word == column_name.name:
+                            validation += 1
+        if validation > 0:
+            output = True
+        else:
+            output = False
+        log.debug("%s", output)
+        return output
+
+    def determine_task_type(self, input_sentence):
+        sentence = input_sentence.rstrip(string.punctuation.replace('"', '').replace("'", ""))
+        sentence_word_list = sentence.split()
+        for word in sentence_word_list:
+            if word in self.explore_keywords:
+                task_type = 'EXPLORE CARD'
+                break
+            else:
+                task_type = 'APPLY FILTER'
+        return task_type
+
     def parse_sentence(self, sentence, stopwordsFilter=None):
         sys.tracebacklimit = 0  # Remove traceback from Exception
         number_of_select_column = 0
@@ -862,7 +888,9 @@ class Parser:
         last_table_position = 0
         columns_of_select = []
         columns_of_where = []
-        #print(self.database_dico)
+        sentence = 'Input: ' + sentence
+        task_type = self.determine_task_type(sentence)
+
         if stopwordsFilter is not None:
             sentence = stopwordsFilter.filter(sentence)
 
@@ -879,23 +907,6 @@ class Parser:
         number_of_where_column_temp = 0
         last_table_position_temp = 0
         med_phrase = ''
-        all_key = 0
-        token = nltk.word_tokenize(input_for_finding_value)
-        input_word_list2 = list(ngrams(token, 2))
-        input_word_list3 = list(ngrams(token, 3))
-        input_word_list3 = [' '.join(list(x)) for x in input_word_list3]
-        input_word_list2 = [' '.join(list(x)) for x in input_word_list2]
-        input_word_list2 += input_word_list
-        input_word_list3 += input_word_list2
-        for word in input_word_list3:
-            if word in self.all_keywords:
-                all_key += 1
-
-        if all_key == 0:
-            print('Invalid Sentence')
-            raise SystemExit(1)
-        # TODO: merge this part of the algorithm (detection of values of where)
-        #  in the rest of the parsing algorithm (about line 725) '''
 
         for i in range(0, len(input_word_list)):
             for table_name in self.database_dico:
@@ -914,7 +925,7 @@ class Parser:
                 else:
                     continue
                 break
-        if 'explore' in input_word_list:
+        if task_type == 'EXPLORE CARD':
             med_phrase = input_word_list[:]
         end_phrase = input_word_list[len(med_phrase):]
         irext = ' '.join(end_phrase)
@@ -930,16 +941,12 @@ class Parser:
                 irext = irext.replace(filter_element, " ")
 
             assignment_list = self.equal_keywords + self.contains_keywords + self.not_contains_keywords + self.starts_with_keywords + self.ends_with_keywords + self.not_starts_with_keywords + self.not_ends_with_keywords + self.like_keywords + self.greater_keywords + self.less_keywords + self.negation_keywords + self.gte_keywords + self.lte_keywords
-            # As these words can also be part of assigners
-
-            # custom operators added as they can be possibilities
             assignment_list.append(':')
             assignment_list.append('to')
             assignment_list.append('=')
             for key in self.between_keywords:
                 if key in irext:
                     assignment_list.append('and')
-            # Algorithmic logic for best substitution for extraction of values with the help of assigners.
             assignment_list = self.transformation_sort(assignment_list)
 
             maverickjoy_general_assigner = "*res*@3#>>*"
@@ -996,7 +1003,6 @@ class Parser:
                             else:
                                 columns_of_values_of_where.append(str(irext_list[index].replace('<_>', ' ')))
         ''' ----------------------------------------------------------------------------------------------------------- '''
-        #print(columns_of_values_of_where)
         select_phrase = ''
         from_phrase = ''
         where_phrase = ''
@@ -1006,7 +1012,7 @@ class Parser:
         select_phrase = words[:len(med_phrase)]
         last_table_position = len(med_phrase)
 
-        if 'explore' not in words:
+        if task_type != 'EXPLORE CARD':
             for i in range(0, len(words)):
                 for table_name in self.database_dico:
                         columns = self.database_object.get_table_by_name(table_name).get_columns()
@@ -1031,15 +1037,12 @@ class Parser:
                             columns_of_select.append(column.name)
                             number_of_select_column += 1
                             break
-        if 'explore' in words:
+        if task_type == 'EXPLORE CARD':
             where_phrase = []
         else:
             where_phrase = words[len(select_phrase):]
         where_group_phrase = words[:len(select_phrase)]
-        #print(columns_of_select)
-        #if (number_of_select_column  + number_of_where_column) == 0:
-        #    raise ParsingException("No keyword found in sentence!")
-        #tables_of_from = self.database_object.get_table_with_this_column(columns_of_select[0])[0].split(' ')
+
         if len(columns_of_select) > 0:
             columns_of_select = list(set(columns_of_select))
             column_of_select = columns_of_select[0].split(' ')
@@ -1079,7 +1082,7 @@ class Parser:
         previous_index = 0
         previous_phrase_type = 0
         yet_where = 0
-        if 'explore' in where_group_phrase:
+        if task_type == 'EXPLORE CARD':
             if len(where_phrase) == 0:
                 for i in range(0, len(where_group_phrase)):
                     if where_group_phrase[i] in self.order_by_keywords:
@@ -1189,14 +1192,11 @@ class Parser:
                 group_by_phrase.append(where_phrase[previous_index:])
             else:
                 new_where_phrase.append(where_phrase)
-#        print(where_phrase)
 
         if len(from_phrase) + len(where_phrase) + len(group_by_phrase) + len(order_by_phrase) == 0:
-            print('Invalid Sentence')
             raise SystemExit(1)
 
         try:
-
             where_parser = WhereParser(new_where_phrase, columns_of_values_of_where,
                                        self.count_keywords, self.sum_keywords, self.average_keywords, self.max_keywords,
                                        self.min_keywords, self.greater_keywords, self.less_keywords,
@@ -1222,7 +1222,6 @@ class Parser:
             order_by_parser.start()
 
             queries = from_parser.join()
-            #print(queries[0])
         except:
             raise ParsingException("Parsing error occured in thread!")
 
@@ -1234,27 +1233,23 @@ class Parser:
             select_objects = select_parser.join()
             group_by_objects = group_by_parser.join()
             order_by_objects = order_by_parser.join()
-            #print(where_objects[0])
-            #print(select_objects[0])
-            #print(group_by_objects[0])
-            #print(order_by_objects[0])
         except:
             raise ParsingException("Parsing error occured in thread!")
-
         for i in range(0, len(queries)):
             query = queries[i]
-            if 'explore' in input_word_list:
+            if task_type == 'EXPLORE CARD':
                 if select_objects[i] is not None:
                     query.set_select(select_objects[i])
                 if group_by_objects[i] is not None:
                     query.set_group_by(group_by_objects[i])
             else:
-                if where_objects[i] is not None:
-                    query.set_where(where_objects[i])
-                if select_objects[i] is not None:
-                    query.set_select(select_objects[i])
-                if group_by_objects[i] is not None:
-                    query.set_group_by(group_by_objects[i])
-                if order_by_objects[i] is not None:
-                    query.set_order_by(order_by_objects[i])
+                if len(where_objects) > 0:
+                    if where_objects[i] is not None:
+                        query.set_where(where_objects[i])
+                    if select_objects[i] is not None:
+                        query.set_select(select_objects[i])
+                    if group_by_objects[i] is not None:
+                        query.set_group_by(group_by_objects[i])
+                    if order_by_objects[i] is not None:
+                        query.set_order_by(order_by_objects[i])
         return queries

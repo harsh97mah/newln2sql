@@ -66,7 +66,7 @@ class Database:
             data[table.name] = table.get_foreign_keys()
         return data
 
-    def get_primary_keys_of_table(self, table_name):
+    def get_primary_keys_of_table(self, ):
         for table in self.tables:
             if table.name == table_name:
                 return table.get_primary_keys()
@@ -89,24 +89,15 @@ class Database:
     def add_table(self, table):
         self.tables.append(table)
 
-    @staticmethod
-    def _generate_path(path):
-        cwd = os.path.dirname(__file__)
-        filename = os.path.join(cwd, path)
-        return filename
+    # @staticmethod
+    # def _generate_path(path):
+    #     cwd = os.path.dirname(__file__)
+    #     filename = os.path.join(cwd, path)
+    #     return filename
 
-    def load(self, path):
-        with open(self._generate_path(path)) as f:
-            content = f.read()
-            tables_string = [p.split(';')[0] for p in content.split('CREATE') if ';' in p]
-            for table_string in tables_string:
-                if 'TABLE' in table_string:
-                    table = self.create_table(table_string)
-                    self.add_table(table)
-            alter_tables_string = [p.split(';')[0] for p in content.split('ALTER') if ';' in p]
-            for alter_table_string in alter_tables_string:
-                if 'TABLE' in alter_table_string:
-                    self.alter_table(alter_table_string)
+    def load(self, data):
+        table = self.create_table(data)
+        self.add_table(table)
 
     def predict_type(self, string):
         if 'int' in string.lower():
@@ -119,45 +110,34 @@ class Database:
             return 'unknow'
 
 
-    def create_table(self, table_string):
-        lines = table_string.split("\n")
+    def create_table(self, data_list):
+        # lines = table_string.split("\n")
         table = Table()
-        for line in lines:
-            if 'TABLE' in line:
-                table_name = re.search("`(\w+)`", line)
-                table.name = table_name.group(1)
-                if self.thesaurus_object is not None:
-                    table.equivalences = self.thesaurus_object.get_synonyms_of_a_word(table.name)
-            elif 'PRIMARY KEY' in line:
-                primary_key_columns = re.findall("`(\w+)`", line)
-                for primary_key_column in primary_key_columns:
-                    table.add_primary_key(primary_key_column)
-            else:
-                column_name = re.search("`(\w+)`", line)
-                if column_name is not None:
-                    column_type = self.predict_type(line)
-                    if self.thesaurus_object is not None:
-                        equivalences = self.thesaurus_object.get_synonyms_of_a_word(column_name.group(1))
-                    else:
-                        equivalences = []
-                    table.add_column(column_name.group(1), column_type, equivalences)
-        return table
+#        for line in lines:
+#            if 'TABLE' in line:
+        table_name = 'dataset'
+        table.name = table_name
+        #if self.thesaurus_object is not None:
+            #table.equivalences = self.thesaurus_object.get_synonyms_of_a_word(table.name)
+            #elif 'PRIMARY KEY' in line:
 
-    def alter_table(self, alter_string):
-        lines = alter_string.replace('\n', ' ').split(';')
-        for line in lines:
-            if 'PRIMARY KEY' in line:
-                table_name = re.search("TABLE `(\w+)`", line).group(1)
-                table = self.get_table_by_name(table_name)
-                primary_key_columns = re.findall("PRIMARY KEY \(`(\w+)`\)", line)
-                for primary_key_column in primary_key_columns:
-                    table.add_primary_key(primary_key_column)
-            elif 'FOREIGN KEY' in line:
-                table_name = re.search("TABLE `(\w+)`", line).group(1)
-                table = self.get_table_by_name(table_name)
-                foreign_keys_list = re.findall("FOREIGN KEY \(`(\w+)`\) REFERENCES `(\w+)` \(`(\w+)`\)", line)
-                for column, foreign_table, foreign_column in foreign_keys_list:
-                    table.add_foreign_key(column, foreign_table, foreign_column)
+        # primary_key_columns = re.findall("`(\w+)`", line)
+                # for primary_key_column in primary_key_columns:
+                    # table.add_primary_key(primary_key_column)
+            # else:
+        # column_name = re.search("`(\w+)`", line)
+        for i in range(len(data_list)):
+            column_name = data_list[i]['col_name']
+            column_internal_name = data_list[i]['internal_name']
+            column_type = data_list[i]['col_type']
+            if column_name is not None:
+                    # column_type = self.predict_type(line)
+                if self.thesaurus_object is not None:
+                    equivalences = self.thesaurus_object.get_synonyms_of_a_word(column_name.group(1))
+                else:
+                    equivalences = []
+                table.add_column(column_name, column_internal_name, column_type, equivalences)
+        return table
 
     def print_me(self):
         for table in self.tables:

@@ -1,6 +1,7 @@
 class Column:
-    def __init__(self, name='', type=None, equivalences=None):
+    def __init__(self, name='',internal_name='', type=None, equivalences=None):
         self._name = name
+        self._internal_name = internal_name
 
         if not type:
             type = []
@@ -17,6 +18,10 @@ class Column:
     def name(self):
         return self._name
 
+    @property
+    def internal_name(self):
+        return self._internal_name
+        
     @property
     def type(self):
         return self._type
