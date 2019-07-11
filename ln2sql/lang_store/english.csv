@@ -24,7 +24,7 @@ LTE: less than or equal to,at most,,,,
 NONEMPTY: not empty,not blank,have value,not none,not null,non empty
 EXPLORE: explore,summary,,,,
 CONTAINS: contain, contains, with letters, with string,
-NOT CONTAINS: not contains, not contain, without letters, without string, does not contains
+NOT CONTAINS: does not contains, does not contain, without letters, without string, does not contains
 STARTS WITH: starts with, begins with, at the start, at the beginning,
 ENDS WITH: ends with, at the ending,
 NOT START WITH: does not start with, does not begin with,
